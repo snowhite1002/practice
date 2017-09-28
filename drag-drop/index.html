@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        body, div, ul, li {
+            margin: 0;
+            padding: 0;
+        }
+
+        div {
+            position: relative;
+            margin: 20px auto;
+            width: 800px;
+        }
+
+        ul, li {
+            list-style: none;
+        }
+
+        .main-menu {
+            position: relative;
+            margin: 0 auto;
+            /*width: 500px;*/
+        }
+
+        li {
+            margin: 5px 0;
+            padding: 10px 15px;
+            width: 380px;
+            height: 20px;
+            border-radius: 3px;
+            line-height: 20px;
+            background-color: #f8f8f8;
+            color: #000000;
+            cursor: move;
+        }
+
+        .menu-item-content {
+            margin: 0;
+        }
+
+        .sub-menu .menu-item {
+            width: 320px;
+            background-color: #f1f1f1;
+        }
+
+        .office {
+            height: auto;
+        }
+
+        li:hover {
+            background-color: #eeeeee;
+            box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        li:hover.dndDragging {
+            background-color: #d6ecff;
+            box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.1);
+        }
+    </style>
+    <script src="angular.min.js"></script>
+    <script src="angular-drag-and-drop-lists.js"></script>
+</head>
+<body>
+<div ng-app="app" class="client-menu">
+    <ul class="main-menu"
+        ng-controller="myCtrl1"
+        dnd-list
+        dnd-drop="onDropInMainMenu(pcMenuList, item, index)">
+        <li class="menu-item"
+            ng-repeat="menu in pcMenuList.mainMenu"
+            ng-class="{office: menu.children}"
+            dnd-draggable="getSelectedItemToDragging(pcMenuList.mainMenu, menu)"
+            dnd-moved="dropInMainMenuEnd(pcMenuList)">
+
+            <div class="menu-item-content">{{menu.id}}</div>
+
+            <ul ng-if="menu.children"
+                class="sub-menu"
+                dnd-list
+                dnd-drop="onDropInSubMenu(pcMenuList, item, index)">
+                <li class="menu-item"
+                    ng-repeat="subMenu in pcMenuList.subMenu"
+                    dnd-draggable="getSelectedItemToDragging(pcMenuList, subMenu, 2)"
+                    dnd-moved="dropInSubMenuEnd(pcMenuList)">
+                    <div class="menu-item-content">{{subMenu.id}}</div>
+                </li>
+            </ul>
+        </li>
+    </ul>
+</div>
+<script>
+    angular.module('app', ['dndLists']).controller('myCtrl1', function ($scope) {
+        $scope.pcMenuList = {
+            allowTypes: ['pc'],
+            mainMenu: [
+                {
+                    id: 1,
+                    type: 'default',
+                    cate: 'pc'
+                },
+                {
+                    id: 2,
+                    type: 'default',
+                    cate: 'pc'
+                },
+                {
+                    id: 3,
+                    type: 'default',
+                    cate: 'pc'
+                },
+                {
+                    id: 4,
+                    type: 'default',
+                    cate: 'pc'
+                },
+                {
+                    id: 5,
+                    type: 'default',
+                    cate: 'pc',
+                    children: true
+                }
+            ],
+            subMenu: [
+                {
+                    id: 6,
+                    type: 'default',
+                    cate: 'pc'
+                },
+                {
+                    id: 7,
+                    type: 'self',
+                    cate: 'pc'
+                },
+                {
+                    id: 8,
+                    type: 'self',
+                    cate: 'pc'
+                },
+                {
+                    id: 9,
+                    type: 'default',
+                    cate: 'pc'
+                }
+            ]
+        };
+
+
+
+        $scope.getSelectedItemToDragging = function(list, item, type){
+            item.selected = true;
+
+            if(type == 2){
+                return list.subMenu.filter(function(item) {
+                    return item.selected;
+                });
+            }
+
+            return list.filter(function(item) {
+                return item.selected;
+            });
+        };
+
+        $scope.onDropInMainMenu = function(pcMenuList, draggingItems, desIndex){
+            console.log("end");
+            console.log('mainList', pcMenuList);
+            console.log('draggingItem', draggingItems);
+            console.log('desIndex', desIndex);
+            angular.forEach(draggingItems, function(item) {
+                item.selected = false;
+            });
+
+            var outItem = draggingItems.filter(function(item) { return pcMenuList.allowTypes.indexOf(item.cate) == -1; });
+            console.log(outItem);
+            if(outItem.length > 0){
+                console.log("外来导航禁止放入");
+                return false;
+            }
+
+            if(pcMenuList.mainMenu.length == 6){
+                console.log("PC端一级导航最多为6个");
+                return false;
+            }
+
+            var selfItem = draggingItems.filter(function(item) { return item.type == 'self'; });
+
+            if(selfItem.length > 0){
+                console.log("自定义模块不能设为一级导航");
+                return false;
+            }
+
+            pcMenuList.mainMenu = pcMenuList.mainMenu.slice(0, desIndex)
+                .concat(draggingItems)
+                .concat(pcMenuList.mainMenu.slice(desIndex));
+
+            return true;
+        };
+
+        $scope.dropInMainMenuEnd = function(pcMenuList){
+            console.log("end2");
+
+            pcMenuList.mainMenu = pcMenuList.mainMenu.filter(function(item) { return !item.selected; });
+        };
+
+        $scope.onDropInSubMenu = function(list, draggingItems, desIndex){
+            console.log("2end");
+            console.log('mainList', list);
+            console.log('draggingItem', draggingItems);
+            console.log('desIndex', desIndex);
+            angular.forEach(draggingItems, function(item) { item.selected = false; });
+
+            var outItem = draggingItems.filter(function(item) { return list.allowTypes.indexOf(item.cate) == -1; });
+            console.log(outItem);
+            if(outItem.length > 0){
+                return false;
+            }
+
+            list.subMenu = list.subMenu.slice(0, desIndex)
+                .concat(draggingItems)
+                .concat(list.subMenu.slice(desIndex));
+
+            return true;
+        };
+
+        $scope.dropInSubMenuEnd = function(list){
+            console.log("2end2");
+
+            list.subMenu = list.subMenu.filter(function(item) { return !item.selected; });
+        };
+    });
+</script>
+</body>
+</html>
+
